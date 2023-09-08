@@ -24,6 +24,7 @@ from python_qt_binding import loadUi
 from python_qt_binding.QtCore import QTimer, Signal
 from python_qt_binding.QtWidgets import QWidget, QFormLayout
 
+from sensor_msgs.msg import JointState
 from control_msgs.msg import JointTrajectoryControllerState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
@@ -253,8 +254,8 @@ class JointTrajectoryController(Plugin):
         self._speed_scale = val / self._speed_scaling_widget.slider.maximum()
 
     def _on_joint_state_change(self, actual_pos):
-        assert len(actual_pos) == len(self._joint_pos)
-        for name in actual_pos.keys():
+        #assert len(actual_pos) == len(self._joint_pos)
+        for name in self._joint_pos.keys():
             self._joint_pos[name]["position"] = actual_pos[name]
 
     def _on_cm_change(self, cm_ns):
@@ -332,10 +333,12 @@ class JointTrajectoryController(Plugin):
 
         # Setup ROS interfaces
         jtc_ns = _resolve_controller_ns(self._cm_ns, self._jtc_name)
-        state_topic = jtc_ns + "/state"
+        #state_topic = jtc_ns + "/state"
+        state_topic = "joint_states"
         cmd_topic = jtc_ns + "/joint_trajectory"
         self._state_sub = self._node.create_subscription(
-            JointTrajectoryControllerState, state_topic, self._state_cb, 1
+            #JointTrajectoryControllerState, state_topic, self._state_cb, 1
+            JointState, state_topic, self._state_cb, 1
         )
         self._cmd_pub = self._node.create_publisher(JointTrajectory, cmd_topic, 1)
 
@@ -405,9 +408,12 @@ class JointTrajectoryController(Plugin):
 
     def _state_cb(self, msg):
         actual_pos = {}
-        for i in range(len(msg.joint_names)):
-            joint_name = msg.joint_names[i]
-            joint_pos = msg.actual.positions[i]
+        #for i in range(len(msg.joint_names)):
+        for i in range(len(msg.name)):
+            #joint_name = msg.joint_names[i]
+            #joint_pos = msg.actual.positions[i]
+            joint_name = msg.name[i]
+            joint_pos = msg.position[i]
             actual_pos[joint_name] = joint_pos
         self.jointStateChanged.emit(actual_pos)
 
